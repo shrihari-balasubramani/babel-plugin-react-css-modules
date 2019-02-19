@@ -45,6 +45,9 @@
         }
       ]
     },
+    "addStyleImport": {
+      "type": "boolean"
+    },
     "removeImport": {
       "type": "boolean"
     },
