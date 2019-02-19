@@ -31,6 +31,28 @@ export default ({
 }) => {
   const filenameMap = {};
 
+  const setupImportedStyle = (path, filename, stylerName) => {
+    const programPath = path.findParent(parentPath => {
+      return parentPath.isProgram();
+    });
+    filenameMap[filename].styleModuleImportMapIdentifier = programPath.scope.generateUidIdentifier(stylerName);
+    filenameMap[filename].styleModuleImportMapIdentifier.name = stylerName;
+    const firstNonImportDeclarationNode = programPath.get('body').find(node => {
+      return !t.isImportDeclaration(node);
+    });
+    firstNonImportDeclarationNode.insertBefore(
+      t.variableDeclaration(
+        'const',
+        [
+          t.variableDeclarator(
+            filenameMap[filename].styleModuleImportMapIdentifier,
+            createObjectExpression(t, filenameMap[filename].styleModuleImportMap[stylerName])
+          )
+        ]
+      )
+    );
+  };
+
   const setupFileForRuntimeResolution = (path, filename) => {
     const programPath = path.findParent((parentPath) => {
       return parentPath.isProgram();
@@ -47,7 +69,7 @@ export default ({
             filenameMap[filename].importedHelperIndentifier
           )
         ],
-        t.stringLiteral('babel-plugin-react-css-modules/dist/browser/getClassName')
+        t.stringLiteral('@demonarchy/babel-plugin-react-css-modules/dist/browser/getClassName')
       )
     );
 
@@ -177,7 +199,10 @@ export default ({
         if (stats.opts.webpackHotModuleReloading) {
           addWebpackHotModuleAccept(path);
         }
-
+        if (stats.opts.addStyleImport && path.node.specifiers.length === 1) {
+          setupImportedStyle(path, filename, styleImportName)
+          path.remove();
+        }
         if (stats.opts.removeImport) {
           path.remove();
         }
